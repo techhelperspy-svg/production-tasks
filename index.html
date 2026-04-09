@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SAP Production Tasks</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ff:'IBM Plex Sans',sans-serif;
+  --fm:'IBM Plex Mono',monospace;
+  --bg:#F4F3F0;
+  --card:#FFFFFF;
+  --border:rgba(0,0,0,0.12);
+  --text:#1A1A1A;
+  --muted:#555;
+  --hint:#999;
+  --r:12px;
+  --info-bg:#E6F1FB;
+  --info-text:#185FA5;
+  --warn-bg:#FAEEDA;
+  --warn-text:#854F0B;
+  --ok-bg:#E1F5EE;
+  --ok-text:#0F6E56;
+  --err-bg:#FCEBEB;
+  --err-text:#A32D2D;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1C1C1A;--card:#262624;--border:rgba(255,255,255,0.1);
+    --text:#F0EFE8;--muted:#AAA;--hint:#666;
+    --info-bg:#042C53;--info-text:#85B7EB;
+    --warn-bg:#412402;--warn-text:#FAC775;
+    --ok-bg:#04342C;--ok-text:#5DCAA5;
+    --err-bg:#501313;--err-text:#F09595;
+  }
+}
+body{font-family:var(--ff);background:var(--bg);min-height:100vh;display:flex;justify-content:center;padding:1.5rem 1rem 3rem;color:var(--text)}
+.phone{width:100%;max-width:420px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0 1.25rem}
+.topbar-title{font-size:20px;font-weight:600}
+.badge-sys{font-family:var(--fm);font-size:11px;color:var(--info-text);background:var(--info-bg);padding:3px 8px;border-radius:20px}
+.search-row{display:flex;gap:8px;margin-bottom:1.25rem}
+.search-input{flex:1;height:44px;border-radius:8px;border:1px solid var(--border);background:var(--card);padding:0 14px;font-family:var(--fm);font-size:15px;color:var(--text);outline:none}
+.search-input:focus{border-color:#185FA5;box-shadow:0 0 0 3px rgba(23,108,197,0.12)}
+.search-input::placeholder{color:var(--hint)}
+.btn-search{height:44px;padding:0 18px;border-radius:8px;background:#185FA5;color:#E6F1FB;border:none;font-family:var(--ff);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;transition:opacity 0.15s}
+.btn-search:hover{opacity:0.87}
+.btn-search:disabled{opacity:0.45;cursor:not-allowed}
+.section-label{font-size:12px;font-weight:500;color:var(--hint);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px}
+.task-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:12px;transition:border-color 0.2s}
+.task-card.selected{border-color:#185FA5}
+.task-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.task-id{font-family:var(--fm);font-size:22px;font-weight:500}
+.status-pill{font-size:12px;font-weight:500;padding:4px 10px;border-radius:20px}
+.pill-pending{background:var(--warn-bg);color:var(--warn-text)}
+.pill-confirmed{background:var(--ok-bg);color:var(--ok-text)}
+.pill-error{background:var(--err-bg);color:var(--err-text)}
+.pill-ready{background:var(--info-bg);color:var(--info-text)}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.field-item{background:var(--bg);border-radius:8px;padding:10px 12px}
+.field-label{font-size:11px;color:var(--hint);margin-bottom:3px}
+.field-value{font-size:13px;font-weight:500;font-family:var(--fm);word-break:break-all}
+.field-value.long{font-size:11px}
+.btn-confirm{width:100%;height:42px;border-radius:8px;border:none;background:#185FA5;color:#E6F1FB;font-family:var(--ff);font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity 0.15s}
+.btn-confirm:hover:not(:disabled){opacity:0.87}
+.btn-confirm:disabled{opacity:0.45;cursor:not-allowed}
+.btn-confirm.confirmed{background:#0F6E56;color:#E1F5EE}
+.btn-confirm.errored{background:#A32D2D;color:#FCEBEB}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--hint)}
+.empty-icon{font-size:36px;margin-bottom:12px}
+.empty-text{font-size:15px;color:var(--muted)}
+.empty-sub{font-size:13px;color:var(--hint);margin-top:6px}
+.error-banner{background:var(--err-bg);border:1px solid rgba(163,45,45,0.25);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--err-text)}
+.cors-note{background:var(--warn-bg);border:1px solid rgba(133,79,11,0.25);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--warn-text);line-height:1.6}
+.cors-note strong{font-weight:600}
+.log-section{margin-top:1.5rem}
+.log-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.log-item:last-child{border-bottom:none}
+.log-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.log-dot.ok{background:#1D9E75}
+.log-dot.err{background:#E24B4A}
+.log-dot.info{background:#378ADD}
+.log-text{font-size:13px;color:var(--muted);font-family:var(--fm);line-height:1.5}
+.log-time{font-size:11px;color:var(--hint);margin-top:2px}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="topbar">
+    <div class="topbar-title">Production Tasks</div>
+    <div class="badge-sys">BYD OData</div>
+  </div>
+
+  <div class="cors-note">
+    <strong>Note:</strong> If you see a CORS or network error, your SAP ByD system needs to allow requests from this domain. Contact your SAP admin to whitelist this URL in the CORS settings, or set up the proxy described in the README.
+  </div>
+
+  <div class="search-row">
+    <input class="search-input" id="taskInput" type="text" placeholder="Task ID (e.g. 3633)" />
+    <button class="btn-search" id="fetchBtn" onclick="fetchTask()">Fetch</button>
+  </div>
+
+  <div id="errorBanner" style="display:none" class="error-banner"></div>
+
+  <div id="resultArea">
+    <div class="empty-state">
+      <div class="empty-icon">⬡</div>
+      <div class="empty-text">Enter a task ID to begin</div>
+      <div class="empty-sub">Queries SAP ByDesign production task OData service</div>
+    </div>
+  </div>
+
+  <div class="log-section" id="logSection" style="display:none">
+    <div class="section-label">Activity log</div>
+    <div id="logList"></div>
+  </div>
+</div>
+
+<script>
+const BASE = 'https://my433447.businessbydesign.cloud.sap/sap/byd/odata/cust/v1/productiontask';
+const AUTH = 'Basic ' + btoa('_PRODUCTIONT:Welcome123');
+const headers = {'Authorization': AUTH, 'Accept': 'application/xml'};
+
+let tasks = {};
+let logs = [];
+
+function addLog(type, msg) {
+  const time = new Date().toTimeString().slice(0,8);
+  logs.unshift({type, msg, time});
+  renderLog();
+}
+
+function renderLog() {
+  const sec = document.getElementById('logSection');
+  const list = document.getElementById('logList');
+  if (!logs.length) { sec.style.display='none'; return; }
+  sec.style.display='block';
+  list.innerHTML = logs.slice(0,8).map(l =>
+    `<div class="log-item">
+      <div class="log-dot ${l.type}"></div>
+      <div><div class="log-text">${l.msg}</div><div class="log-time">${l.time}</div></div>
+    </div>`
+  ).join('');
+}
+
+async function fetchTask() {
+  const id = document.getElementById('taskInput').value.trim();
+  if (!id) return;
+  const btn = document.getElementById('fetchBtn');
+  const errBanner = document.getElementById('errorBanner');
+  errBanner.style.display='none';
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  addLog('info', `Querying task ID: ${id}`);
+  try {
+    const url = `${BASE}/ProductionTaskCollection?$filter=ID eq '${encodeURIComponent(id)}'`;
+    const resp = await fetch(url, { headers });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    const text = await resp.text();
+    const xml = new DOMParser().parseFromString(text, 'application/xml');
+    const props = xml.querySelector('properties');
+    if (!props) throw new Error('No task found for ID: ' + id);
+    const objID = props.querySelector('ObjectID')?.textContent || '';
+    const taskID = props.querySelector('ID')?.textContent || id;
+    tasks[id] = { objectID: objID, taskID, status: 'ready', confirming: false };
+    addLog('info', `Found task ${taskID} — ObjectID: ${objID.slice(0,12)}…`);
+    renderTasks();
+  } catch(e) {
+    errBanner.textContent = e.message;
+    errBanner.style.display='block';
+    addLog('err', `Fetch failed: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Fetch';
+  }
+}
+
+async function confirmTask(id) {
+  const task = tasks[id];
+  if (!task || task.status === 'confirmed' || task.confirming) return;
+  task.confirming = true;
+  renderTasks();
+  addLog('info', `Confirming task ${task.taskID}…`);
+  try {
+    const url = `${BASE}/ProductionTaskConfirmAsPlanned?ObjectID='${task.objectID}'`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json', 'X-CSRF-Token': 'fetch' }
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    task.status = 'confirmed';
+    task.confirming = false;
+    addLog('ok', `Task ${task.taskID} confirmed as planned`);
+  } catch(e) {
+    task.status = 'error';
+    task.confirming = false;
+    task.errorMsg = e.message;
+    addLog('err', `Confirm failed: ${e.message}`);
+  }
+  renderTasks();
+}
+
+function renderTasks() {
+  const area = document.getElementById('resultArea');
+  const ids = Object.keys(tasks);
+  if (!ids.length) {
+    area.innerHTML = `<div class="empty-state"><div class="empty-icon">⬡</div><div class="empty-text">Enter a task ID to begin</div><div class="empty-sub">Queries SAP ByDesign production task OData service</div></div>`;
+    return;
+  }
+  area.innerHTML = `<div class="section-label" style="margin-bottom:10px">Results (${ids.length})</div>` + [...ids].reverse().map(id => {
+    const t = tasks[id];
+    const sPill = t.status==='confirmed'?'pill-confirmed':t.status==='error'?'pill-error':t.confirming?'pill-pending':'pill-ready';
+    const sLabel = t.status==='confirmed'?'Confirmed':t.status==='error'?'Error':t.confirming?'Confirming…':'Ready';
+    const btnClass = t.status==='confirmed'?'btn-confirm confirmed':t.status==='error'?'btn-confirm errored':'btn-confirm';
+    const btnLabel = t.status==='confirmed'?'✓ Confirmed as planned':t.status==='error'?'✗ Retry confirm':t.confirming?'':'Confirm as planned';
+    const disabled = t.status==='confirmed'?'disabled':'';
+    return `
+    <div class="task-card ${t.status==='ready'||t.confirming?'selected':''}">
+      <div class="task-header">
+        <div>
+          <div style="font-size:11px;color:var(--hint);margin-bottom:4px">Task ID</div>
+          <div class="task-id">${t.taskID}</div>
+        </div>
+        <div class="status-pill ${sPill}">${sLabel}</div>
+      </div>
+      <div class="field-grid">
+        <div class="field-item"><div class="field-label">ObjectID</div><div class="field-value long">${t.objectID.slice(0,16)}…</div></div>
+        <div class="field-item"><div class="field-label">System</div><div class="field-value">my433447</div></div>
+      </div>
+      ${t.status==='error'?`<div class="error-banner" style="margin-bottom:12px">${t.errorMsg||'Confirmation failed'}</div>`:''}
+      <button class="${btnClass}" onclick="confirmTask('${id}')" ${disabled}>
+        ${t.confirming?'<div class="spinner"></div>':''}
+        ${btnLabel}
+      </button>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('taskInput').addEventListener('keydown', e => {
+  if (e.key==='Enter') fetchTask();
+});
+</script>
+</body>
+</html>
