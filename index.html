@@ -74,7 +74,9 @@ body{font-family:var(--ff);background:var(--bg);min-height:100vh;display:flex;ju
 .empty-icon{font-size:36px;margin-bottom:12px}
 .empty-text{font-size:15px;color:var(--muted)}
 .empty-sub{font-size:13px;color:var(--hint);margin-top:6px}
-.error-banner{background:var(--err-bg);border:1px solid rgba(163,45,45,0.25);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--err-text)}
+.error-banner{background:var(--err-bg);border:1px solid rgba(163,45,45,0.25);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--err-text);line-height:1.5}
+.error-banner .err-code{font-family:var(--fm);font-weight:500;font-size:12px;margin-bottom:4px;opacity:0.7}
+.error-banner .err-msg{font-size:13px}
 .log-section{margin-top:1.5rem}
 .log-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
 .log-item:last-child{border-bottom:none}
@@ -121,6 +123,19 @@ const headers = {'Accept': 'application/xml'};
 let tasks = {};
 let logs = [];
 
+// Parse SAP XML error message from response body
+async function parseSapError(resp) {
+  try {
+    const text = await resp.text();
+    const xml = new DOMParser().parseFromString(text, 'application/xml');
+    // SAP returns <message> inside <error>
+    const msg = xml.querySelector('message')?.textContent;
+    const code = xml.querySelector('code')?.textContent;
+    if (msg) return { code: code || resp.status, message: msg, raw: text };
+  } catch(e) {}
+  return { code: resp.status, message: `HTTP ${resp.status}: ${resp.statusText}`, raw: '' };
+}
+
 function addLog(type, msg) {
   const time = new Date().toTimeString().slice(0,8);
   logs.unshift({type, msg, time});
@@ -152,7 +167,10 @@ async function fetchTask() {
   try {
     const url = `${BASE}/ProductionTaskCollection?$filter=ID eq '${encodeURIComponent(id)}'`;
     const resp = await fetch(url, { headers });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    if (!resp.ok) {
+      const err = await parseSapError(resp);
+      throw new Error(err.message);
+    }
     const text = await resp.text();
     const xml = new DOMParser().parseFromString(text, 'application/xml');
     const props = xml.querySelector('properties');
@@ -163,7 +181,7 @@ async function fetchTask() {
     addLog('info', `Found task ${taskID} — ObjectID: ${objID.slice(0,12)}…`);
     renderTasks();
   } catch(e) {
-    errBanner.textContent = e.message;
+    errBanner.innerHTML = `<div class="err-msg">${e.message}</div>`;
     errBanner.style.display='block';
     addLog('err', `Fetch failed: ${e.message}`);
   } finally {
@@ -184,9 +202,13 @@ async function confirmTask(id) {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json', 'X-CSRF-Token': 'fetch' }
     });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    if (!resp.ok) {
+      const err = await parseSapError(resp);
+      throw new Error(err.message);
+    }
     task.status = 'confirmed';
     task.confirming = false;
+    task.errorMsg = null;
     addLog('ok', `Task ${task.taskID} confirmed as planned`);
   } catch(e) {
     task.status = 'error';
@@ -224,7 +246,10 @@ function renderTasks() {
         <div class="field-item"><div class="field-label">ObjectID</div><div class="field-value long">${t.objectID.slice(0,16)}…</div></div>
         <div class="field-item"><div class="field-label">System</div><div class="field-value">my433447</div></div>
       </div>
-      ${t.status==='error'?`<div class="error-banner" style="margin-bottom:12px">${t.errorMsg||'Confirmation failed'}</div>`:''}
+      ${t.status==='error' && t.errorMsg ? `
+        <div class="error-banner" style="margin-bottom:12px">
+          <div class="err-msg">${t.errorMsg}</div>
+        </div>` : ''}
       <button class="${btnClass}" onclick="confirmTask('${id}')" ${disabled}>
         ${t.confirming?'<div class="spinner"></div>':''}
         ${btnLabel}
