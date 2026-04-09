@@ -75,8 +75,6 @@ body{font-family:var(--ff);background:var(--bg);min-height:100vh;display:flex;ju
 .empty-text{font-size:15px;color:var(--muted)}
 .empty-sub{font-size:13px;color:var(--hint);margin-top:6px}
 .error-banner{background:var(--err-bg);border:1px solid rgba(163,45,45,0.25);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--err-text)}
-.cors-note{background:var(--warn-bg);border:1px solid rgba(133,79,11,0.25);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--warn-text);line-height:1.6}
-.cors-note strong{font-weight:600}
 .log-section{margin-top:1.5rem}
 .log-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
 .log-item:last-child{border-bottom:none}
@@ -95,10 +93,6 @@ body{font-family:var(--ff);background:var(--bg);min-height:100vh;display:flex;ju
     <div class="badge-sys">BYD OData</div>
   </div>
 
-  <div class="cors-note">
-    <strong>Note:</strong> If you see a CORS or network error, your SAP ByD system needs to allow requests from this domain. Contact your SAP admin to whitelist this URL in the CORS settings, or set up the proxy described in the README.
-  </div>
-
   <div class="search-row">
     <input class="search-input" id="taskInput" type="text" placeholder="Task ID (e.g. 3633)" />
     <button class="btn-search" id="fetchBtn" onclick="fetchTask()">Fetch</button>
@@ -110,7 +104,7 @@ body{font-family:var(--ff);background:var(--bg);min-height:100vh;display:flex;ju
     <div class="empty-state">
       <div class="empty-icon">⬡</div>
       <div class="empty-text">Enter a task ID to begin</div>
-      <div class="empty-sub">Queries SAP ByDesign production task OData service</div>
+      <div class="empty-sub">Queries SAP ByDesign via Cloudflare proxy</div>
     </div>
   </div>
 
@@ -121,9 +115,8 @@ body{font-family:var(--ff);background:var(--bg);min-height:100vh;display:flex;ju
 </div>
 
 <script>
-const BASE = 'https://my433447.businessbydesign.cloud.sap/sap/byd/odata/cust/v1/productiontask';
-const AUTH = 'Basic ' + btoa('_PRODUCTIONT:Welcome123');
-const headers = {'Authorization': AUTH, 'Accept': 'application/xml'};
+const BASE = 'https://production-tasks.techhelperspy.workers.dev';
+const headers = {'Accept': 'application/xml'};
 
 let tasks = {};
 let logs = [];
@@ -208,7 +201,7 @@ function renderTasks() {
   const area = document.getElementById('resultArea');
   const ids = Object.keys(tasks);
   if (!ids.length) {
-    area.innerHTML = `<div class="empty-state"><div class="empty-icon">⬡</div><div class="empty-text">Enter a task ID to begin</div><div class="empty-sub">Queries SAP ByDesign production task OData service</div></div>`;
+    area.innerHTML = `<div class="empty-state"><div class="empty-icon">⬡</div><div class="empty-text">Enter a task ID to begin</div><div class="empty-sub">Queries SAP ByDesign via Cloudflare proxy</div></div>`;
     return;
   }
   area.innerHTML = `<div class="section-label" style="margin-bottom:10px">Results (${ids.length})</div>` + [...ids].reverse().map(id => {
